@@ -9,7 +9,7 @@ Bu bot, Discord üzerinden linklerini uptime tutmana yarar. Linkler `linkler.txt
 - Kullanıcılar kendi linklerini ekleyip, listeleyip, silebilir.
 - Bot sahibi tüm linkleri görebilir.
 - Linkler `linkler.txt` dosyasında tutulur.
-- Token `.token` dosyasından okunur.
+- Token `token.token` dosyasından okunur.
 - Hatalar ve durumlar Discord'a mesaj olarak bildirilir.
 
 ---
