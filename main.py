@@ -1,107 +1,118 @@
 import discord
-from discord.ext import commands, tasks
-import requests
-import os
+from discord.ext import commands
+
+TOKEN_DOSYA = "token.token"
+
+def token_oku():
+    try:
+        with open(TOKEN_DOSYA, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
+
+TOKEN = token_oku()
+if TOKEN is None or TOKEN == "":
+    print("token.token dosyasında geçerli token yok!")
+    exit()
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
 
-LINK_DOSYA = "linkler.txt"  ##Linkler Buraya Kaydedilicek Eğer Yoksa Otomatik Oluşturur!
-BOT_SAHIBI_ID = 123456789012345678  # Kendi kullanıcı ID'ni buraya yaz!
+bot = commands.Bot(command_prefix="u!", intents=intents)
 
-if not os.path.exists(LINK_DOSYA):
-    with open(LINK_DOSYA, "w") as f:
-        pass
-
-def linkleri_yukle():
-    linkler = []
-    with open(LINK_DOSYA, "r") as f:
-        for satir in f:
-            parcalar = satir.strip().split("||")
-            if len(parcalar) == 2:
-                linkler.append({"sahip": parcalar[0], "url": parcalar[1]})
-    return linkler
-
-def link_ekle(user_id, url):
-    with open(LINK_DOSYA, "a") as f:
-        f.write(f"{user_id}||{url}\n")
-
-def link_sil(user_id, url):
-    linkler = linkleri_yukle()
-    with open(LINK_DOSYA, "w") as f:
-        for link in linkler:
-            if not (link["sahip"] == str(user_id) and link["url"] == url):
-                f.write(f'{link["sahip"]}||{link["url"]}\n')
-
-@tasks.loop(minutes=5)
-async def uptime():
-    linkler = linkleri_yukle()
-    print(f"[UPTIME] {len(linkler)} link kontrol ediliyor...")
-    for link in linkler:
-        try:
-            requests.get(link["url"])
-            print(f"[✔] {link['url']} aktif.")
-        except:
-            print(f"[✖] {link['url']} ulaşılamıyor.")
+BOT_SAHIBI_ID = 123456789012345678  # Buraya kendi Discord ID'ni yaz
 
 @bot.event
 async def on_ready():
     print(f"{bot.user} aktif oldu!")
-    uptime.start()
 
-@bot.command()
-async def link_ekle(ctx, url):
-    if not url.startswith("http"):
-        return await ctx.send("🚫 Link düzgün değil knk, http veya https ile başlamalı.")
-
-    linkler = linkleri_yukle()
-    for link in linkler:
-        if link["sahip"] == str(ctx.author.id) and link["url"] == url:
-            return await ctx.send("⚠️ Bu link zaten sende kayıtlı.")
-
-    link_ekle(ctx.author.id, url)
+@bot.command(name="link-ekle")
+async def link_ekle(ctx, url=None):
+    if url is None:
+        await ctx.send("❌ URL girmen gerekiyor! Örnek: `u!link-ekle https://site.com`")
+        return
+    with open("linkler.txt", "a", encoding="utf-8") as f:
+        f.write(f"{ctx.author.id} {url}\n")
     await ctx.send(f"✅ Link eklendi: {url}")
 
-@bot.command()
+@bot.command(name="linklerim")
 async def linklerim(ctx):
-    linkler = linkleri_yukle()
-    kendi_linkler = [l["url"] for l in linkler if l["sahip"] == str(ctx.author.id)]
+    try:
+        with open("linkler.txt", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        await ctx.send("Henüz hiç link eklenmemiş.")
+        return
 
-    if not kendi_linkler:
-        return await ctx.send("📝 Hiç link eklememişsin knk.")
+    user_links = [line.split(' ', 1)[1].strip() for line in lines if line.startswith(str(ctx.author.id))]
+    if not user_links:
+        await ctx.send("Senin kayıtlı linkin yok.")
+        return
 
-    mesaj = "**Senin Linklerin:**\n"
-    for i, url in enumerate(kendi_linkler, 1):
-        mesaj += f"{i}. {url}\n"
-
+    mesaj = "**Senin linklerin:**\n" + "\n".join(user_links)
     await ctx.send(mesaj)
 
-@bot.command()
-async def link_sil(ctx, url):
-    linkler = linkleri_yukle()
-    if not any(l["sahip"] == str(ctx.author.id) and l["url"] == url for l in linkler):
-        return await ctx.send("❗ Bu link sende kayıtlı değil.")
+@bot.command(name="link-sil")
+async def link_sil(ctx, url=None):
+    if url is None:
+        await ctx.send("❌ Silmek istediğin linki yazmalısın! Örnek: `u!link-sil https://site.com`")
+        return
+    try:
+        with open("linkler.txt", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        await ctx.send("Henüz hiç link eklenmemiş.")
+        return
 
-    link_sil(ctx.author.id, url)
-    await ctx.send(f"🗑️ Link silindi: {url}")
+    yeni_lines = []
+    silindi = False
+    for line in lines:
+        if line.startswith(str(ctx.author.id)) and url in line:
+            silindi = True
+            continue
+        yeni_lines.append(line)
 
-@bot.command()
+    if silindi:
+        with open("linkler.txt", "w", encoding="utf-8") as f:
+            f.writelines(yeni_lines)
+        await ctx.send(f"✅ Link silindi: {url}")
+    else:
+        await ctx.send("❌ O linki sen eklememişsin veya böyle bir link yok.")
+
+@bot.command(name="tum_linkler")
 async def tum_linkler(ctx):
     if ctx.author.id != BOT_SAHIBI_ID:
-        return await ctx.send("🚫 Bu komut sadece bot sahibine açık knk.")
+        await ctx.send("❌ Bu komutu sadece bot sahibi kullanabilir.")
+        return
+    try:
+        with open("linkler.txt", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        await ctx.send("Henüz hiç link eklenmemiş.")
+        return
+    if not lines:
+        await ctx.send("Link listesi boş.")
+        return
 
-    linkler = linkleri_yukle()
-    if not linkler:
-        return await ctx.send("📂 Hiç link yok.")
+    mesaj = "**Tüm linkler:**\n" + "".join(lines)
+    if len(mesaj) > 2000:
+        await ctx.send("Linkler çok uzun, dosya olarak gönderiyorum...")
+        with open("tum_linkler.txt", "w", encoding="utf-8") as f:
+            f.writelines(lines)
+        await ctx.send(file=discord.File("tum_linkler.txt"))
+    else:
+        await ctx.send(mesaj)
 
-    mesaj = "**Tüm Linkler:**\n"
-    for i, link in enumerate(linkler, 1):
-        mesaj += f"{i}. {link['url']} | Sahip: <@{link['sahip']}>\n"
-
-    await ctx.send(mesaj[:2000])  # 2000 karakter sınırı için dikkat!
-
-with open("token.token", "r") as f:
-    TOKEN = f.read().strip()
+@bot.command(name="yardım")
+async def yardim(ctx):
+    mesaj = (
+        "**Uptime Bot Komutları:**\n"
+        "`u!link-ekle <url>` : Link ekle\n"
+        "`u!linklerim` : Kendi linklerini göster\n"
+        "`u!link-sil <url>` : Link sil\n"
+        "`u!tum_linkler` : (Sadece bot sahibi) Tüm linkler\n"
+        "`u!yardım` : Bu mesajı gösterir"
+    )
+    await ctx.send(mesaj)
 
 bot.run(TOKEN)
