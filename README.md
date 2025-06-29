@@ -29,4 +29,9 @@ Bu bot, Discord üzerinden linklerini uptime tutmana yarar. Linkler `linkler.txt
    ```bash
    pip install discord.py requests
 
+3. Start.Bat Dosyasını Çalıştır
+  Ordan 2. Seçeneği Seçip Tokeni Yapıştırınız (Yapıştırmak Sağ Tık!)
+  Sonra 1. Seçeneği Çalıştırınız
+  Tebrikler Artık Çalışıyor
+
 ##BYSCEASTY
