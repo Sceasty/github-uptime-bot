@@ -1,7 +1,7 @@
 # Discord Uptime Bot (Python)
 
 ## Açıklama
-Bu bot, Discord üzerinden linklerini uptime tutmana yarar. Linkler `linkler.txt` dosyasında saklanır ve her 5 dakikada bir kontrol edilir.
+Bu bot, Discord üzerinden linklerini uptime tutmana yarar. Linkler `linkler.txt` dosyasında saklanır ve her 5 dakikada bir kontrol edilir. Ve Lütfen main.py de idnizi ekleyin.
 
 ---
 
